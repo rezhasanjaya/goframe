@@ -20,7 +20,15 @@ func NewApp() *Application {
 	InitValidator()
 	InitRedis(cfg)
 
-	r := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("Failed to set trusted proxies: %v", err)
+	}
+
 	log.Println("✅ Application initialized")
 
 	return &Application{

@@ -14,6 +14,7 @@ type Config struct {
 	DBUser string
 	DBPass string
 	DBName string
+	DBPort string
 
 	RedisHost string
 }
@@ -30,6 +31,7 @@ func LoadConfig() *Config {
 		DBUser: getEnv("DB_USER", "root"),
 		DBPass: getEnv("DB_PASS", ""),
 		DBName: getEnv("DB_NAME", "goframe"),
+		DBPort: getEnv("DB_PORT", "3306"),
 
 		RedisHost: getEnv("REDIS_HOST", "127.0.0.1:6379"),
 	}
