@@ -1,4 +1,3 @@
-// cmd/migrate.go
 package cmd
 
 import (
@@ -15,15 +14,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const migrationPath = "database/migrations"
+
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Run database migrations",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Load config and init DB
 		cfg := config.LoadConfig()
 		bootstrap.InitDB(cfg)
 
-		db, err := bootstrap.DB.DB() // ambil *sql.DB dari gorm.DB
+		db, err := bootstrap.DB.DB()
 		if err != nil {
 			fmt.Println("❌ Failed to get *sql.DB:", err)
 			os.Exit(1)
@@ -36,7 +36,7 @@ var migrateCmd = &cobra.Command{
 		}
 
 		m, err := migrate.NewWithDatabaseInstance(
-			"file://migrations",
+			"file://"+migrationPath,
 			"mysql",
 			driver,
 		)
@@ -58,7 +58,6 @@ var rollbackCmd = &cobra.Command{
 	Use:   "migrate:rollback",
 	Short: "Rollback last migration",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Load config and init DB
 		cfg := config.LoadConfig()
 		bootstrap.InitDB(cfg)
 
@@ -75,7 +74,7 @@ var rollbackCmd = &cobra.Command{
 		}
 
 		m, err := migrate.NewWithDatabaseInstance(
-			"file://migrations",
+			"file://"+migrationPath,
 			"mysql",
 			driver,
 		)
@@ -100,19 +99,17 @@ var createMigrationCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		name := args[0]
 		timestamp := time.Now().Format("20060102150405")
-		basePath := "migrations"
 
 		// Ensure migrations folder exists
-		if _, err := os.Stat(basePath); os.IsNotExist(err) {
-			err = os.MkdirAll(basePath, os.ModePerm)
-			if err != nil {
+		if _, err := os.Stat(migrationPath); os.IsNotExist(err) {
+			if err := os.MkdirAll(migrationPath, os.ModePerm); err != nil {
 				fmt.Println("❌ Failed to create migrations folder:", err)
 				return
 			}
 		}
 
-		upFile := filepath.Join(basePath, fmt.Sprintf("%s_%s.up.sql", timestamp, name))
-		downFile := filepath.Join(basePath, fmt.Sprintf("%s_%s.down.sql", timestamp, name))
+		upFile := filepath.Join(migrationPath, fmt.Sprintf("%s_%s.up.sql", timestamp, name))
+		downFile := filepath.Join(migrationPath, fmt.Sprintf("%s_%s.down.sql", timestamp, name))
 
 		upTemplate := "-- +migrate Up\n\n"
 		downTemplate := "-- +migrate Down\n\n"
