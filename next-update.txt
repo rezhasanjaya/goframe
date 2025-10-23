@@ -1,0 +1,3 @@
+- softdeletes
+- default jwt middleware
+- validator input
