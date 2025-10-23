@@ -1,16 +1,20 @@
 package routes
 
 import (
-	"net/http"
+	"goframe/internal/app/http/controllers/api"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterAPIRoutes(r *gin.Engine) {
-	api := r.Group("/api")
+	// Initialize controllers
+	pingController := new(api.PingController)
+
+	// Initialize services
+
+ 	//route group for API
+	apiGroup := r.Group("/api")
 	{
-		api.GET("/ping", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"message": "pong"})
-		})
+		apiGroup.GET("/ping", pingController.Ping)
 	}
 }

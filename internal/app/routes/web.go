@@ -1,13 +1,19 @@
 package routes
 
 import (
-	"net/http"
+	"path/filepath"
+	"runtime"
+
+	"goframe/internal/app/http/controllers"
 
 	"github.com/gin-gonic/gin"
 )
 
 func RegisterWebRoutes(r *gin.Engine) {
-	r.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Welcome to GoFrame 🚀")
-	})
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Join(filepath.Dir(b), "../views")
+
+	r.LoadHTMLGlob(filepath.Join(basePath, "*.html"))
+	r.Static("/images", "./public/images")
+	r.GET("/", controllers.WelcomePage)
 }
