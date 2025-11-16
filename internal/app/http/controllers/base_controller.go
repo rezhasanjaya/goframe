@@ -3,6 +3,8 @@ package controllers
 import (
 	"net/http"
 
+	appErr "goframe/internal/core/errors"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,8 +23,6 @@ type ErrorResponse struct {
 	Status  bool        `json:"status"`
 	Message string      `json:"message"`
 	Error   interface{} `json:"error"`
-	
-
 }
 
 type ValidationErrorResponse struct {
@@ -94,4 +94,105 @@ func (bc *BaseController) NoContent(c *gin.Context) {
 		Status:  true,
 	}
 	c.JSON(http.StatusNoContent, resp)
+}
+
+func (bc *BaseController) BadRequest(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusBadRequest,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusBadRequest, resp)
+}
+
+func (bc *BaseController) Unauthorized(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusUnauthorized,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusUnauthorized, resp)
+}
+
+func (bc *BaseController) Forbidden(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusForbidden,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusForbidden, resp)
+}
+
+func (bc *BaseController) NotFound(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusNotFound,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusNotFound, resp)
+}
+
+func (bc *BaseController) Conflict(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusConflict,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusConflict, resp)
+}
+
+func (bc *BaseController) InternalError(c *gin.Context, message string, err interface{}) {
+	resp := ErrorResponse{
+		Code:    http.StatusInternalServerError,
+		Status:  false,
+		Message: message,
+		Error:   err,
+	}
+	c.JSON(http.StatusInternalServerError, resp)
+}
+
+func (bc *BaseController) HandleServiceError(c *gin.Context, err error) {
+	if e, ok := err.(*appErr.AppError); ok {
+
+		switch e.Code {
+		case "NOT_FOUND":
+			c.JSON(http.StatusNotFound, ErrorResponse{
+				Code:    http.StatusNotFound,
+				Status:  false,
+				Message: e.Message,
+				Error:   e.Code,
+			})
+			return
+
+		case "DUPLICATE":
+			c.JSON(http.StatusConflict, ErrorResponse{
+				Code:    http.StatusConflict,
+				Status:  false,
+				Message: e.Message,
+				Error:   e.Code,
+			})
+			return
+
+		case "INVALID":
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Code:    http.StatusBadRequest,
+				Status:  false,
+				Message: e.Message,
+				Error:   e.Code,
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusInternalServerError, ErrorResponse{
+		Code:    http.StatusInternalServerError,
+		Status:  false,
+		Message: "Internal Server Error",
+		Error:   err.Error(),
+	})
 }

@@ -1,21 +1,20 @@
 package services
 
 import (
-	"errors"
-
 	"goframe/internal/app/models"
 	"goframe/internal/core/bootstrap"
+	appErr "goframe/internal/core/errors"
 
 	"gorm.io/gorm"
 )
 
 // ---------------- Response Structs ----------------
 type UserResponse struct {
-	UUID       string    `json:"uuid"`
-	Name       string    `json:"name"`
-	Email      string    `json:"email"`
-	Level      int       `json:"level"`
-	FlagActive int       `json:"flag_active"`
+	UUID       string `json:"uuid"`
+	Name       string `json:"name"`
+	Email      string `json:"email"`
+	Level      int    `json:"level"`
+	FlagActive int    `json:"flag_active"`
 }
 
 type UserCreateResponse struct {
@@ -27,7 +26,6 @@ type UserManageResponse struct {
 	UUID  string `json:"uuid"`
 	Email string `json:"email"`
 }
-
 
 // ---------------- Service ----------------
 type UserService struct {
@@ -63,9 +61,11 @@ func (s *UserService) Fetch() ([]*UserResponse, error) {
 
 func (s *UserService) Get(uuid string) (*UserResponse, error) {
 	var user models.User
+
 	if err := s.db.Where("uuid = ?", uuid).First(&user).Error; err != nil {
-		return nil, err
+		return nil, appErr.NotFound("user not found")
 	}
+
 	return sanitizeUser(&user), nil
 }
 
@@ -80,14 +80,15 @@ func (s *UserService) Create(user *models.User) (*UserCreateResponse, error) {
 	}, nil
 }
 
-func (s *UserService) Update(uuid string, updateData map[string]interface{}) (*UserManageResponse, error) {
+func (s *UserService) Update(uuid string, updatedData any) (*UserManageResponse, error) {
 	var user models.User
+
 	if err := s.db.Where("uuid = ?", uuid).First(&user).Error; err != nil {
-		return nil, errors.New("user not found")
+		return nil, appErr.NotFound("user not found")
 	}
 
-	if err := s.db.Model(&user).Updates(updateData).Error; err != nil {
-		return nil, err
+	if err := s.db.Model(&user).Updates(updatedData).Error; err != nil {
+		return nil, appErr.Invalid("failed to update user")
 	}
 
 	return &UserManageResponse{
@@ -98,8 +99,9 @@ func (s *UserService) Update(uuid string, updateData map[string]interface{}) (*U
 
 func (s *UserService) Delete(uuid string) (*UserManageResponse, error) {
 	var user models.User
+
 	if err := s.db.Where("uuid = ?", uuid).First(&user).Error; err != nil {
-		return nil, errors.New("user not found")
+		return nil, appErr.NotFound("user not found")
 	}
 
 	if err := s.db.Delete(&user).Error; err != nil {

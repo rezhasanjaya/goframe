@@ -4,12 +4,14 @@ import (
 	"goframe/internal/app/http/controllers"
 	"goframe/internal/app/models"
 	"goframe/internal/app/services"
+	"goframe/internal/app/validators"
+	"goframe/internal/core/validation"
 
 	"github.com/gin-gonic/gin"
 )
 
 type UserController struct {
-	controllers.BaseController // embed langsung
+	controllers.BaseController
 	Service *services.UserService
 }
 
@@ -18,8 +20,6 @@ func NewUserController() *UserController {
 		Service: services.NewUserService(),
 	}
 }
-
-// GET /api/users
 func (uc *UserController) Index(c *gin.Context) {
 	users, err := uc.Service.Fetch()
 	if err != nil {
@@ -29,60 +29,65 @@ func (uc *UserController) Index(c *gin.Context) {
 	uc.Success(c, "Users retrieved", users)
 }
 
-// GET /api/users/:uuid
 func (uc *UserController) Show(c *gin.Context) {
 	uuid := c.Param("uuid")
 	user, err := uc.Service.Get(uuid)
 	if err != nil {
-		uc.Error(c, "User not found", err.Error())
+		uc.HandleServiceError(c, err)
 		return
 	}
 	uc.Success(c, "User retrieved", user)
 }
 
-// POST /api/users
 func (uc *UserController) Store(c *gin.Context) {
-	var input models.User
-	if err := c.ShouldBindJSON(&input); err != nil {
-		uc.ValidationError(c, err.Error())
+	var req validators.CreateValidator
+
+	if errs, err := validation.BindAndValidate(c, &req); err != nil {
+		uc.ValidationError(c, errs)
 		return
 	}
 
-	resp, err := uc.Service.Create(&input)
+	user := &models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+	}
+
+	resp, err := uc.Service.Create(user)
 	if err != nil {
 		uc.Error(c, "Failed to create user", err.Error())
 		return
 	}
+
 	uc.Created(c, "User created", resp)
 }
 
-// PUT /api/users/:uuid
 func (uc *UserController) Update(c *gin.Context) {
 	uuid := c.Param("uuid")
-	var input map[string]interface{}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		uc.ValidationError(c, err.Error())
+	var req validators.UpdateValidator
+
+	if errs, err := validation.BindAndValidate(c, &req); err != nil {
+		uc.ValidationError(c, errs)
 		return
 	}
 
-	user, err := uc.Service.Update(uuid, input)
+	user, err := uc.Service.Update(uuid, req)
 	if err != nil {
-		uc.Error(c, "Failed to update user", err.Error())
+		uc.HandleServiceError(c, err)
 		return
 	}
+
 	uc.Success(c, "User updated", user)
 }
 
-// DELETE /api/users/:uuid
 func (uc *UserController) Delete(c *gin.Context) {
 	uuid := c.Param("uuid")
 
 	resp, err := uc.Service.Delete(uuid)
 	if err != nil {
-		uc.Error(c, "Failed to delete user", err.Error())
+		uc.HandleServiceError(c, err)
 		return
 	}
 
 	uc.Success(c, "User deleted", resp)
 }
-
