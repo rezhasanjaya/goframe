@@ -7,6 +7,7 @@ import (
 	"goframe/internal/app/models"
 	"goframe/internal/core/bootstrap"
 	"goframe/internal/core/config"
+	appErr "goframe/internal/core/errors"
 	"goframe/internal/core/jwt"
 	"goframe/internal/core/utils"
 
@@ -41,11 +42,13 @@ func (s *AuthService) Register(u *models.User) error {
 
 func (s *AuthService) Login(email, password string) (accessToken string, refreshToken string, refreshExpiry time.Time, err error) {
 	var user models.User
+
 	if err = s.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return "", "", time.Time{}, err
+		return "", "", time.Time{}, appErr.NotFound("user not found")
 	}
+
 	if !user.ComparePassword(password) {
-		return "", "", time.Time{}, errors.New("invalid credentials")
+		return "", "", time.Time{}, appErr.Invalid("invalid credentials")
 	}
 
 	accessToken, err = jwt.GenerateAccessToken(s.cfg.JWTSecret, s.cfg.AccessTokenTTLMin, user.UUID, user.Email)
@@ -77,15 +80,17 @@ func (s *AuthService) Login(email, password string) (accessToken string, refresh
 
 func (s *AuthService) Refresh(email, providedRefresh string) (newAccessToken, newRefreshToken string, newExpiry time.Time, err error) {
 	var user models.User
+
 	if err = s.db.Where("email = ?", email).First(&user).Error; err != nil {
-		return "", "", time.Time{}, err
+		return "", "", time.Time{}, appErr.NotFound("user not found")
 	}
+
 	if user.RefreshTokenHash == "" {
-		return "", "", time.Time{}, errors.New("no refresh token stored")
+		return "", "", time.Time{}, appErr.Unauthorized("no refresh token stored")
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(user.RefreshTokenHash), []byte(providedRefresh)) != nil {
-		return "", "", time.Time{}, errors.New("invalid refresh token")
+		return "", "", time.Time{}, appErr.Invalid("invalid refresh token")
 	}
 
 	newAccessToken, err = jwt.GenerateAccessToken(s.cfg.JWTSecret, s.cfg.AccessTokenTTLMin, user.UUID, user.Email)
@@ -104,6 +109,7 @@ func (s *AuthService) Refresh(email, providedRefresh string) (newAccessToken, ne
 	}
 
 	newExpiry = time.Now().Add(time.Duration(s.cfg.RefreshTokenTTLH) * time.Hour)
+
 	if err := s.db.Model(&user).Updates(map[string]interface{}{
 		"refresh_token_hash": string(hash),
 		"updated_at":         time.Now(),
@@ -115,8 +121,18 @@ func (s *AuthService) Refresh(email, providedRefresh string) (newAccessToken, ne
 }
 
 func (s *AuthService) Logout(email string) error {
-	return s.db.Model(&models.User{}).Where("email = ?", email).Updates(map[string]interface{}{
+	var user models.User
+
+	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return appErr.NotFound("user not found")
+	}
+
+	if err := s.db.Model(&user).Updates(map[string]interface{}{
 		"refresh_token_hash": nil,
 		"updated_at":         time.Now(),
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+
+	return nil
 }

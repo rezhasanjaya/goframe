@@ -39,7 +39,7 @@ func (ac *AuthController) Register(c *gin.Context) {
 	}
 
 	if err := ac.service.Register(user); err != nil {
-		ac.Error(c, "Failed to register", err.Error())
+		ac.HandleServiceError(c, err)
 		return
 	}
 
@@ -59,7 +59,7 @@ func (ac *AuthController) Login(c *gin.Context) {
 
 	access, refresh, expiry, err := ac.service.Login(req.Email, req.Password)
 	if err != nil {
-		ac.Error(c, "Failed to login", err.Error())
+		ac.HandleServiceError(c, err)
 		return
 	}
 
@@ -80,7 +80,7 @@ func (ac *AuthController) Refresh(c *gin.Context) {
 
 	access, refresh, expiry, err := ac.service.Refresh(req.Email, req.RefreshToken)
 	if err != nil {
-		ac.Error(c, "Failed to refresh token", err.Error())
+		ac.HandleServiceError(c, err)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (ac *AuthController) Logout(c *gin.Context) {
 	}
 
 	if err := ac.service.Logout(req.Email); err != nil {
-		ac.Error(c, "Logout failed", err.Error())
+		ac.HandleServiceError(c, err)
 		return
 	}
 

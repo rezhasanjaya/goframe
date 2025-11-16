@@ -29,3 +29,10 @@ func Invalid(msg string) *AppError {
 		Message: msg,
 	}
 }
+
+func Unauthorized(msg string) *AppError {
+	return &AppError{
+		Code:    "UNAUTHORIZED",
+		Message: msg,
+	}
+}

@@ -186,7 +186,17 @@ func (bc *BaseController) HandleServiceError(c *gin.Context, err error) {
 				Error:   e.Code,
 			})
 			return
+
+		case "UNAUTHORIZED":
+			c.JSON(http.StatusBadRequest, ErrorResponse{
+				Code:    http.StatusBadRequest,
+				Status:  false,
+				Message: e.Message,
+				Error:   e.Code,
+			})
+			return
 		}
+
 	}
 
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
